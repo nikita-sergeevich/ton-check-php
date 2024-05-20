@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>TON Wallet Check</title>
+	<style>
+		.ton_connect_wrap { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); }
+	</style>
+</head>
+<body>
+	<div class="ton_connect_wrap">
+	    <div class="ton_connect" id="ton-connect"></div>
+	</div>
+
+	<script src="https://code.jquery.com/jquery-3.7.1.js" integrity="sha256-eKhayi8LEQwp4NKxN+CfCh+3qOVUtJn3QNZ0TciWLP4=" crossorigin="anonymous"></script> <!-- connect jquery -->
+	<script src="https://unpkg.com/@tonconnect/ui@latest/dist/tonconnect-ui.min.js"></script> <!-- connect TonConnect UI -->
+	<script src="https://cdn.jsdelivr.net/gh/orbs-network/ton-access@2.2.0/dist/index.min.js"></script> <!-- connect TonWeb -->
+	<script src="https://cdn.jsdelivr.net/gh/toncenter/tonweb/dist/tonweb.js"></script> <!-- connect TonWeb -->
+
+	<script>
+		document.addEventListener("DOMContentLoaded", function () {
+			// get the decentralized RPC endpoint
+			TonAccess.getHttpEndpoint().then((endpoint) => { 
+				// initialize tonweb library
+				const tonweb = new TonWeb(new TonWeb.HttpProvider(endpoint)); 
+			});
+		});
+	</script>
+	
+	<script type="text/javascript">
+		const tonConnectUI = new TON_CONNECT_UI.TonConnectUI({
+			// your manifest url
+	        manifestUrl: 'https://YOUR-WEBSITE/tonconnect-manifest.json',
+	        buttonRootId: 'ton-connect'
+	    });
+		
+		function getURLParam(paramName) {
+			const params = new URLSearchParams(window.location.search);
+			return params.get(paramName);
+		}
+		
+		//get the value from GET parameters for binding with the database
+		var linkid = getURLParam('link');
+
+	    tonConnectUI.setConnectRequestParameters({
+	        state: "ready",
+	        value: {
+				// passing the attribute from GET parameters as a payload
+	            tonProof: linkid 
+	        }
+	    });
+		
+	    tonConnectUI.onStatusChange(wallet => {
+	        if (wallet && wallet.connectItems?.tonProof && 'proof' in wallet.connectItems.tonProof) 
+	        {
+				const address1 = new TonWeb.utils.Address(wallet.account.address);
+				// toString arguments: isUserFriendly, isUrlSafe, isBounceable, isTestOnly
+				// if you need EQ... wallet : true, true, true
+				// if you need UQ... wallet : true, true, false
+				var addr = address1.toString(true, true, false);			
+				// calling the check function with the required parameters and user-friendly wallet address
+	            checkProof(wallet.connectItems.tonProof.proof, wallet.account, addr);
+	        }
+	    });
+
+	    async function connectToWallet() {
+	        const connectedWallet = await tonConnectUI.connectWallet();
+	    }
+
+	    function checkProof(proof, account, wallet) {
+			// transferring data to the backend
+			$.post("https://YOUR-WEBSITE/back.php", {proof: proof, account: account, wallet: wallet});
+		}
+		
+	    connectToWallet();
+	</script>
+</body>
+</html>
